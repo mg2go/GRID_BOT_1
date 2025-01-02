@@ -73,53 +73,59 @@ def run_grid_bot():
     maker_fee, taker_fee = get_trading_fees()
 
     while True:
-        # Fetch the latest market price
-        ticker = exchange.fetch_ticker(symbol)
-        current_price = ticker['last']
-        print(f"Current price: {current_price}")
+        try:
+            # Fetch the latest market price
+            ticker = exchange.fetch_ticker(symbol)
+            current_price = ticker['last']
+            print(f"Current price: {current_price}")
 
-        # Check grid levels and place orders
-        for price in grid_prices:
-            if price not in active_orders:
-                # Decide whether to place a buy or sell order based on the fees
-                if price < current_price:
-                    expected_profit = (current_price - price) * order_size
-                    trading_fee = taker_fee if expected_profit > 0 else maker_fee
-                    total_fee = expected_profit * trading_fee
-                    net_profit = expected_profit - total_fee
+            # Check grid levels and place orders
+            for price in grid_prices:
+                if price not in active_orders:
+                    # Decide whether to place a buy or sell order based on the fees
+                    if price < current_price:
+                        expected_profit = (current_price - price) * order_size
+                        trading_fee = taker_fee if expected_profit > 0 else maker_fee
+                        total_fee = expected_profit * trading_fee
+                        net_profit = expected_profit - total_fee
 
-                    # Only place sell order if the profit after fees is acceptable
-                    if net_profit > 0:
-                        order = place_order('sell', price, order_size, fee_type='taker')
-                    else:
-                        print(f"Skipping sell order at {price} due to high fees. Net profit after fees is negative.")
-                elif price > current_price:
-                    expected_profit = (price - current_price) * order_size
-                    trading_fee = maker_fee if expected_profit > 0 else taker_fee
-                    total_fee = expected_profit * trading_fee
-                    net_profit = expected_profit - total_fee
+                        # Only place sell order if the profit after fees is acceptable
+                        if net_profit > 0:
+                            order = place_order('sell', price, order_size, fee_type='taker')
+                        else:
+                            print(f"Skipping sell order at {price} due to high fees. Net profit after fees is negative.")
+                    elif price > current_price:
+                        expected_profit = (price - current_price) * order_size
+                        trading_fee = maker_fee if expected_profit > 0 else taker_fee
+                        total_fee = expected_profit * trading_fee
+                        net_profit = expected_profit - total_fee
 
-                    # Only place buy order if the profit after fees is acceptable
-                    if net_profit > 0:
-                        order = place_order('buy', price, order_size, fee_type='maker')
-                    else:
-                        print(f"Skipping buy order at {price} due to high fees. Net profit after fees is negative.")
+                        # Only place buy order if the profit after fees is acceptable
+                        if net_profit > 0:
+                            order = place_order('buy', price, order_size, fee_type='maker')
+                        else:
+                            print(f"Skipping buy order at {price} due to high fees. Net profit after fees is negative.")
 
-                if order:
-                    active_orders[price] = order
+                    if order:
+                        active_orders[price] = order
 
-        # Check and cancel filled orders
-        for price in list(active_orders.keys()):
-            order = active_orders[price]
-            try:
-                order_status = exchange.fetch_order(order['id'], symbol)
-                if order_status['status'] == 'closed':
-                    print(f"Order filled at {price}")
-                    del active_orders[price]
-            except Exception as e:
-                print(f"Error fetching order status: {e}")
+            # Check and cancel filled orders
+            for price in list(active_orders.keys()):
+                order = active_orders[price]
+                try:
+                    order_status = exchange.fetch_order(order['id'], symbol)
+                    if order_status['status'] == 'closed':
+                        print(f"Order filled at {price}")
+                        del active_orders[price]
+                except Exception as e:
+                    print(f"Error fetching order status: {e}")
 
-        time.sleep(60)  # Wait 10 seconds before the next check
+            time.sleep(60)  # Wait 10 seconds before the next check
+
+        except ccxt.base.errors.InvalidNonce as e:
+            print(f"Nonce error: {e}. Skipping this iteration.")
+            time.sleep(60)  # Optional: wait before continuing to avoid overwhelming the API
+            continue  # Skip this iteration and continue with the next one
 
 # If this file is executed directly (not imported), run the bot
 if __name__ == "__main__":
