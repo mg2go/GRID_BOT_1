@@ -9,6 +9,7 @@ load_dotenv()
 api_key = os.getenv('API_KEY')
 secret_key = os.getenv('SECRET_KEY')
 
+
 class CustomKraken(ccxt.kraken):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -118,7 +119,7 @@ def run_grid_bot():
             except Exception as e:
                 print(f"Error fetching order status: {e}")
 
-        time.sleep(10)  # Wait 10 seconds before the next check
+        time.sleep(60)  # Wait 10 seconds before the next check
 
 # If this file is executed directly (not imported), run the bot
 if __name__ == "__main__":
