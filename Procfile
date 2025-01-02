@@ -1,1 +1,1 @@
-worker: python GridBotBase.py
+web: python app.py

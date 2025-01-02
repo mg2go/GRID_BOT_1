@@ -3,21 +3,24 @@ from dotenv import load_dotenv
 import ccxt
 import time
 
+# Load environment variables
+load_dotenv()
+
 api_key = os.getenv('API_KEY')
 secret_key = os.getenv('SECRET_KEY')
 
 # Initialize Kraken exchange
 exchange = ccxt.kraken({
-    'apiKey': api_key,  # Replace with your Kraken API key
-    'secret': secret_key,  # Replace with your Kraken API secret
+    'apiKey': api_key,  
+    'secret': secret_key,  
 })
 
 # Bot Parameters
-symbol = 'ETH/EUR'  # Trading pair
-lower_price = 1850  # Lower limit of the grid
-upper_price = 4000  # Upper limit of the grid
-grid_levels = 30  # Number of grid levels
-invest_amout = 5000  # Total amount to be invested in EUR
+symbol = 'ETH/EUR'  
+lower_price = 1850  
+upper_price = 4000  
+grid_levels = 30  
+invest_amout = 5000  
 
 # Calculate grid step
 grid_step = (upper_price - lower_price) / grid_levels
@@ -32,8 +35,8 @@ grid_prices = [lower_price + i * grid_step for i in range(grid_levels + 1)]
 def get_trading_fees():
     """Fetches the current maker and taker fees for the exchange."""
     fee_info = exchange.fetch_trading_fee(symbol)
-    maker_fee = fee_info['maker']  # Maker fee (if you're adding liquidity)
-    taker_fee = fee_info['taker']  # Taker fee (if you're taking liquidity)
+    maker_fee = fee_info['maker']
+    taker_fee = fee_info['taker']
     return maker_fee, taker_fee
 
 def place_order(side, price, amount, fee_type='taker'):
@@ -65,7 +68,6 @@ def run_grid_bot():
             if price not in active_orders:
                 # Decide whether to place a buy or sell order based on the fees
                 if price < current_price:
-                    # Check if placing a sell order is profitable after fees
                     expected_profit = (current_price - price) * order_size
                     trading_fee = taker_fee if expected_profit > 0 else maker_fee
                     total_fee = expected_profit * trading_fee
@@ -77,7 +79,6 @@ def run_grid_bot():
                     else:
                         print(f"Skipping sell order at {price} due to high fees. Net profit after fees is negative.")
                 elif price > current_price:
-                    # Check if placing a buy order is profitable after fees
                     expected_profit = (price - current_price) * order_size
                     trading_fee = maker_fee if expected_profit > 0 else taker_fee
                     total_fee = expected_profit * trading_fee
@@ -105,5 +106,6 @@ def run_grid_bot():
 
         time.sleep(10)  # Wait 10 seconds before the next check
 
-# Start the bot
-run_grid_bot()
+# If this file is executed directly (not imported), run the bot
+if __name__ == "__main__":
+    run_grid_bot()
