@@ -14,10 +14,10 @@ class CustomKraken(ccxt.kraken):
         super().__init__(*args, **kwargs)
         self.nonce = int(time.time() * 1000)  # Use timestamp in milliseconds
 
-    def nonce(self):
+    def get_nonce(self):
         """Override the nonce to return a unique increasing number"""
-        self.nonce += 1  # Increment nonce manually to avoid issues
-        return self.nonce
+        self._nonce += 1  # Increment nonce manually to avoid issues
+        return self._nonce
     
 # Initialize Kraken exchange
 exchange = CustomKraken({
