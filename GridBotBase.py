@@ -120,10 +120,15 @@ def run_grid_bot():
                 except Exception as e:
                     print(f"Error fetching order status: {e}")
 
-            time.sleep(60)  # Wait 10 seconds before the next check
+            # Wait 10 seconds before the next check
+            time.sleep(60)  # Adjust as needed
 
         except ccxt.base.errors.InvalidNonce as e:
             print(f"Nonce error: {e}. Skipping this iteration.")
+            time.sleep(60)  # Optional: wait before continuing to avoid overwhelming the API
+            continue  # Skip this iteration and continue with the next one
+        except Exception as e:
+            print(f"Unexpected error: {e}. Skipping this iteration.")
             time.sleep(60)  # Optional: wait before continuing to avoid overwhelming the API
             continue  # Skip this iteration and continue with the next one
 
