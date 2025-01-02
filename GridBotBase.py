@@ -9,8 +9,18 @@ load_dotenv()
 api_key = os.getenv('API_KEY')
 secret_key = os.getenv('SECRET_KEY')
 
+class CustomKraken(ccxt.kraken):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.nonce = int(time.time() * 1000)  # Use timestamp in milliseconds
+
+    def nonce(self):
+        """Override the nonce to return a unique increasing number"""
+        self.nonce += 1  # Increment nonce manually to avoid issues
+        return self.nonce
+    
 # Initialize Kraken exchange
-exchange = ccxt.kraken({
+exchange = CustomKraken({
     'apiKey': api_key,  
     'secret': secret_key,  
 })
