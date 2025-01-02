@@ -55,8 +55,12 @@ invest_amount = fetch_investment_amount()
 # Calculate grid step
 grid_step = (upper_price - lower_price) / grid_levels
 
+# Fetch the latest ticker for current price
+ticker = exchange.fetch_ticker(symbol)
+current_price = ticker['last']
+
 # Calculate order size
-order_size = invest_amount / grid_levels
+order_size = (invest_amount / grid_levels) / current_price
 
 # Generate grid prices
 grid_prices = [lower_price + i * grid_step for i in range(grid_levels + 1)]
