@@ -114,7 +114,7 @@ def run_grid_bot():
             print(f"Current price: {current_price}")
 
             # Loop through sell prices (top grid)
-            for price in sell_prices:
+            for price in sell_prices[:]:  # Iterate over a copy of the list
                 if price not in active_sell_orders and price < current_price:
                     # Only place sell orders above the current price
                     fee = calculate_fees("taker", volume=0)  # Use taker fees for selling
@@ -127,11 +127,13 @@ def run_grid_bot():
                         order = place_order('sell', price, order_size, fee_type='taker')
                         if order:
                             active_sell_orders[price] = order
+                            sell_prices.remove(price)  # Remove price after placing the order
+                            print(f"Sell price {price} removed from list after order placed.")
                     else:
                         print(f"Skipping sell order at {price} due to low net profit.")
 
             # Loop through buy prices (bottom grid)
-            for price in buy_prices:
+            for price in buy_prices[:]:  # Iterate over a copy of the list
                 if price not in active_buy_orders and price > current_price:
                     # Only place buy orders below the current price
                     fee = calculate_fees("maker", volume=0)  # Use maker fees for buying
@@ -144,6 +146,8 @@ def run_grid_bot():
                         order = place_order('buy', price, order_size, fee_type='maker')
                         if order:
                             active_buy_orders[price] = order
+                            buy_prices.remove(price)  # Remove price after placing the order
+                            print(f"Buy price {price} removed from list after order placed.")
                     else:
                         print(f"Skipping buy order at {price} due to low net profit.")
 
