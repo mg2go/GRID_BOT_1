@@ -35,7 +35,7 @@ exchange = CustomKraken({
 symbol = 'ETH/EUR'  
 lower_price = 1850  
 upper_price = 4000  
-grid_levels = 30  
+grid_levels = 10  
 invest_amout = 5000  
 
 # Calculate grid step
@@ -46,6 +46,10 @@ order_size = invest_amout / grid_levels
 
 # Generate grid prices
 grid_prices = [lower_price + i * grid_step for i in range(grid_levels + 1)]
+
+# Split grid prices into sell and buy grids
+sell_prices = grid_prices[-5:]  # Top 5 prices for selling
+buy_prices = grid_prices[:5]   # Bottom 5 prices for buying
 
 # Kraken fee tiers based on volume (example values, update based on Kraken's docs)
 kraken_fee_tiers = {
@@ -86,63 +90,81 @@ def place_order(side, price, amount, fee_type='taker'):
 # Main Bot Logic with Fee Calculation
 def run_grid_bot():
     # Track placed orders
-    active_orders = {}
-    i = 0;
+    active_sell_orders = {}
+    active_buy_orders = {}
+
+    iteration_count = 0
+
     while True:
-        i=i+1
-        print("Number of iterations is "+ str(i))
+        iteration_count += 1
+        print(f"Iteration {iteration_count} started")
+
         try:
             # Fetch the latest market price
             ticker = exchange.fetch_ticker(symbol)
             current_price = ticker['last']
             print(f"Current price: {current_price}")
 
-            # Check grid levels and place orders
-            for price in grid_prices:
-                if price not in active_orders:
-                    # Decide whether to place a buy or sell order
-                    if price < current_price:
-                        # Use taker fee for immediate execution
-                        fee = calculate_fees("taker", volume=0)  # Update "volume" based on actual data if needed
-                        expected_profit = (current_price - price) * order_size
-                        total_fee = expected_profit * fee
-                        net_profit = expected_profit - total_fee
+            # Loop through sell prices (top grid)
+            for price in sell_prices:
+                if price not in active_sell_orders and price < current_price:
+                    # Only place sell orders above the current price
+                    fee = calculate_fees("taker", volume=0)  # Use taker fees for selling
+                    expected_profit = (current_price - price) * order_size
+                    total_fee = expected_profit * fee
+                    net_profit = expected_profit - total_fee
 
-                        # Only place sell order if the profit after fees is acceptable
-                        if net_profit > 0:
-                            order = place_order('sell', price, order_size, fee_type='taker')
-                        else:
-                            print(f"Skipping sell order at {price} due to high fees. Net profit after fees is negative.")
-                    elif price > current_price:
-                        # Use maker fee for limit orders
-                        fee = calculate_fees("maker", volume=0)  # Update "volume" based on actual data if needed
-                        expected_profit = (price - current_price) * order_size
-                        total_fee = expected_profit * fee
-                        net_profit = expected_profit - total_fee
+                    # Only place sell order if profit after fees is positive
+                    if net_profit > 0:
+                        order = place_order('sell', price, order_size, fee_type='taker')
+                        if order:
+                            active_sell_orders[price] = order
+                    else:
+                        print(f"Skipping sell order at {price} due to low net profit.")
 
-                        # Only place buy order if the profit after fees is acceptable
-                        if net_profit > 0:
-                            order = place_order('buy', price, order_size, fee_type='maker')
-                        else:
-                            print(f"Skipping buy order at {price} due to high fees. Net profit after fees is negative.")
+            # Loop through buy prices (bottom grid)
+            for price in buy_prices:
+                if price not in active_buy_orders and price > current_price:
+                    # Only place buy orders below the current price
+                    fee = calculate_fees("maker", volume=0)  # Use maker fees for buying
+                    expected_profit = (price - current_price) * order_size
+                    total_fee = expected_profit * fee
+                    net_profit = expected_profit - total_fee
 
-                    if order:
-                        active_orders[price] = order
+                    # Only place buy order if profit after fees is positive
+                    if net_profit > 0:
+                        order = place_order('buy', price, order_size, fee_type='maker')
+                        if order:
+                            active_buy_orders[price] = order
+                    else:
+                        print(f"Skipping buy order at {price} due to low net profit.")
 
-            # Check and cancel filled orders
-            for price in list(active_orders.keys()):
-                order = active_orders[price]
+            # Check and cancel filled sell orders
+            for price in list(active_sell_orders.keys()):
+                order = active_sell_orders[price]
                 try:
                     order_status = exchange.fetch_order(order['id'], symbol)
                     if order_status['status'] == 'closed':
-                        print(f"Order filled at {price}")
-                        del active_orders[price]
+                        print(f"Sell order filled at {price}")
+                        del active_sell_orders[price]
                 except Exception as e:
-                    print(f"Error fetching order status: {e}")
+                    print(f"Error fetching sell order status: {e}")
 
-            # Wait 60 seconds before the next check
-            print("Iteration ended successfully ---- >> ")
+            # Check and cancel filled buy orders
+            for price in list(active_buy_orders.keys()):
+                order = active_buy_orders[price]
+                try:
+                    order_status = exchange.fetch_order(order['id'], symbol)
+                    if order_status['status'] == 'closed':
+                        print(f"Buy order filled at {price}")
+                        del active_buy_orders[price]
+                except Exception as e:
+                    print(f"Error fetching buy order status: {e}")
+
+            # Wait before the next iteration
+            print("Iteration {iteration_count} successfully completed --- >> ")
             time.sleep(60)
+
         except ccxt.base.errors.InvalidNonce as e:
             print(f"Nonce error: {e}. Skipping this iteration.")
             time.sleep(60)
