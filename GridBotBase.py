@@ -162,7 +162,7 @@ def run_grid_bot():
                     print(f"Error fetching buy order status: {e}")
 
             # Wait before the next iteration
-            print("Iteration {iteration_count} successfully completed --- >> ")
+            print(f"Iteration {iteration_count} successfully completed --- >> ")
             time.sleep(60)
 
         except ccxt.base.errors.InvalidNonce as e:
