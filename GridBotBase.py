@@ -23,7 +23,8 @@ class CustomKraken(ccxt.kraken):
     # Optionally, you can overwrite the `nonce()` method used in the sign function
     def nonce(self):
         return self.get_nonce()
-    
+
+
 # Initialize Kraken exchange
 exchange = CustomKraken({
     'apiKey': api_key,  
@@ -46,13 +47,31 @@ order_size = invest_amout / grid_levels
 # Generate grid prices
 grid_prices = [lower_price + i * grid_step for i in range(grid_levels + 1)]
 
-# Fetch the trading fees
-def get_trading_fees():
-    """Fetches the current maker and taker fees for the exchange."""
-    fee_info = exchange.fetch_trading_fee(symbol)
-    maker_fee = fee_info['maker']
-    taker_fee = fee_info['taker']
-    return maker_fee, taker_fee
+# Kraken fee tiers based on volume (example values, update based on Kraken's docs)
+kraken_fee_tiers = {
+    "maker": 0.0016,  # 0.16% for makers
+    "taker": 0.0026,  # 0.26% for takers
+}
+
+def calculate_fees(order_type, volume):
+    """
+    Calculate the trading fees based on Kraken's fee tiers.
+    :param order_type: "maker" or "taker" (depends on order type).
+    :param volume: The total volume traded in the last 30 days (used to determine fee tier).
+    :return: The fee percentage.
+    """
+    # Default to basic fee tiers for now
+    maker_fee = kraken_fee_tiers["maker"]
+    taker_fee = kraken_fee_tiers["taker"]
+
+    # Logic to adjust fees based on trading volume can go here if needed
+    if order_type == "maker":
+        return maker_fee
+    elif order_type == "taker":
+        return taker_fee
+    else:
+        raise ValueError(f"Invalid order type: {order_type}")
+
 
 def place_order(side, price, amount, fee_type='taker'):
     """Places a limit order."""
@@ -64,15 +83,14 @@ def place_order(side, price, amount, fee_type='taker'):
         print(f"Error placing {side} order: {e}")
         return None
 
-# Main Bot Logic with Fee Decision
+# Main Bot Logic with Fee Calculation
 def run_grid_bot():
     # Track placed orders
     active_orders = {}
-
-    # Fetch the current trading fees
-    maker_fee, taker_fee = get_trading_fees()
-
+    i = 0;
     while True:
+        i=i+1
+        print("Number of iterations is "+ i)
         try:
             # Fetch the latest market price
             ticker = exchange.fetch_ticker(symbol)
@@ -82,11 +100,12 @@ def run_grid_bot():
             # Check grid levels and place orders
             for price in grid_prices:
                 if price not in active_orders:
-                    # Decide whether to place a buy or sell order based on the fees
+                    # Decide whether to place a buy or sell order
                     if price < current_price:
+                        # Use taker fee for immediate execution
+                        fee = calculate_fees("taker", volume=0)  # Update "volume" based on actual data if needed
                         expected_profit = (current_price - price) * order_size
-                        trading_fee = taker_fee if expected_profit > 0 else maker_fee
-                        total_fee = expected_profit * trading_fee
+                        total_fee = expected_profit * fee
                         net_profit = expected_profit - total_fee
 
                         # Only place sell order if the profit after fees is acceptable
@@ -95,9 +114,10 @@ def run_grid_bot():
                         else:
                             print(f"Skipping sell order at {price} due to high fees. Net profit after fees is negative.")
                     elif price > current_price:
+                        # Use maker fee for limit orders
+                        fee = calculate_fees("maker", volume=0)  # Update "volume" based on actual data if needed
                         expected_profit = (price - current_price) * order_size
-                        trading_fee = maker_fee if expected_profit > 0 else taker_fee
-                        total_fee = expected_profit * trading_fee
+                        total_fee = expected_profit * fee
                         net_profit = expected_profit - total_fee
 
                         # Only place buy order if the profit after fees is acceptable
@@ -120,17 +140,18 @@ def run_grid_bot():
                 except Exception as e:
                     print(f"Error fetching order status: {e}")
 
-            # Wait 10 seconds before the next check
-            time.sleep(60)  # Adjust as needed
-
+            # Wait 60 seconds before the next check
+            print("Iteration ended successfully ---- >> ")
+            time.sleep(60)
         except ccxt.base.errors.InvalidNonce as e:
             print(f"Nonce error: {e}. Skipping this iteration.")
-            time.sleep(60)  # Optional: wait before continuing to avoid overwhelming the API
-            continue  # Skip this iteration and continue with the next one
+            time.sleep(60)
+            continue
         except Exception as e:
             print(f"Unexpected error: {e}. Skipping this iteration.")
-            time.sleep(60)  # Optional: wait before continuing to avoid overwhelming the API
-            continue  # Skip this iteration and continue with the next one
+            time.sleep(60)
+            continue
+
 
 # If this file is executed directly (not imported), run the bot
 if __name__ == "__main__":
