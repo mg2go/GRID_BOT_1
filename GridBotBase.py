@@ -12,12 +12,16 @@ secret_key = os.getenv('SECRET_KEY')
 class CustomKraken(ccxt.kraken):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.nonce = int(time.time() * 1000)  # Use timestamp in milliseconds
+        self._nonce = int(time.time() * 1000)  # Use timestamp in milliseconds
 
     def get_nonce(self):
         """Override the nonce to return a unique increasing number"""
         self._nonce += 1  # Increment nonce manually to avoid issues
         return self._nonce
+    
+    # Optionally, you can overwrite the `nonce()` method used in the sign function
+    def nonce(self):
+        return self.get_nonce()
     
 # Initialize Kraken exchange
 exchange = CustomKraken({
