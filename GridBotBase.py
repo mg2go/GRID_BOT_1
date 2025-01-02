@@ -36,13 +36,27 @@ symbol = 'ETH/EUR'
 lower_price = 1850  
 upper_price = 4000  
 grid_levels = 10  
-invest_amout = 5000  
+
+# Fetch available balance dynamically
+def fetch_investment_amount():
+    try:
+        balance = exchange.fetch_balance()
+        quote_currency = 'EUR'  # For ETH/EUR, 'EUR' is the quote currency
+        available_balance = balance['free'][quote_currency]
+        print(f"Available {quote_currency} balance: {available_balance}")
+        return available_balance
+    except Exception as e:
+        print(f"Error fetching balance: {e}")
+        return 0  # Fallback to 0 if balance fetch fails
+
+# Fetch the investment amount dynamically from the balance
+invest_amount = fetch_investment_amount()
 
 # Calculate grid step
 grid_step = (upper_price - lower_price) / grid_levels
 
 # Calculate order size
-order_size = invest_amout / grid_levels
+order_size = invest_amount / grid_levels
 
 # Generate grid prices
 grid_prices = [lower_price + i * grid_step for i in range(grid_levels + 1)]
@@ -61,21 +75,11 @@ def calculate_fees(order_type, volume):
     """
     Calculate the trading fees based on Kraken's fee tiers.
     :param order_type: "maker" or "taker" (depends on order type).
-    :param volume: The total volume traded in the last 30 days (used to determine fee tier).
     :return: The fee percentage.
     """
-    # Default to basic fee tiers for now
     maker_fee = kraken_fee_tiers["maker"]
     taker_fee = kraken_fee_tiers["taker"]
-
-    # Logic to adjust fees based on trading volume can go here if needed
-    if order_type == "maker":
-        return maker_fee
-    elif order_type == "taker":
-        return taker_fee
-    else:
-        raise ValueError(f"Invalid order type: {order_type}")
-
+    return maker_fee if order_type == "maker" else taker_fee
 
 def place_order(side, price, amount, fee_type='taker'):
     """Places a limit order."""
