@@ -90,7 +90,7 @@ def run_grid_bot():
     i = 0;
     while True:
         i=i+1
-        print("Number of iterations is "+ i)
+        print("Number of iterations is "+ str(i))
         try:
             # Fetch the latest market price
             ticker = exchange.fetch_ticker(symbol)
