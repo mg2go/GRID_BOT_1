@@ -38,6 +38,15 @@ lower_price = 1850
 upper_price = 4000
 grid_levels = 10
 
+def get_available_balance(currency):
+    """Fetch available balance for a specific currency."""
+    try:
+        balance = exchange.fetch_balance()
+        return balance['free'].get(currency, 0)
+    except Exception as e:
+        print(f"Error fetching balance for {currency}: {e}")
+        return 0
+    
 # Fetch available balance dynamically
 def fetch_investment_amount():
     try:
@@ -136,11 +145,14 @@ def run_grid_bot():
             for price in sell_prices[:]:
                 if price not in active_sell_orders and price < current_price:
                     fee = calculate_fees("taker", volume=0)
-                    order = place_order('sell', price, order_size, fee_type='taker')
-                    if order:
-                        active_sell_orders[price] = order
-                        sell_prices.remove(price)
-
+                    eth_balance = get_available_balance('ETH')  # Replace 'ETH' with the base currency
+                    if eth_balance >= order_size:
+                        order = place_order('sell', price, order_size, fee_type='taker')
+                        if order:
+                            active_sell_orders[price] = order
+                            sell_prices.remove(price)
+                    else:
+                        print(f"Insufficient ETH balance to place sell order. Available: {eth_balance}, Required: {order_size}")
             # Buy orders
             for price in buy_prices[:]:
                 total_invested = get_total_invested()
