@@ -49,19 +49,17 @@ def get_available_balance(currency):
     
 # Fetch available balance dynamically
 def fetch_investment_amount():
+    """Retrieve the INVEST_AMOUNT value from the environment."""
     try:
-        balance = exchange.fetch_balance()
-        quote_currency = 'EUR'  # For ETH/EUR, 'EUR' is the quote currency
-        available_balance = balance['free'][quote_currency]
-        print(f"Available {quote_currency} balance: {available_balance}")
-        return available_balance
-    except Exception as e:
-        print(f"Error fetching balance: {e}")
-        return 0  # Fallback to 0 if balance fetch fails
+        return float(os.environ.get('INVEST_AMOUNT', '0.0'))
+    except ValueError:
+        print("Error parsing INVEST_AMOUNT. Resetting to 0.0.")
+        os.environ['INVEST_AMOUNT'] = '0.0'
+        return 0.0
 
 # Fetch the investment amount dynamically from the balance
-invest_amount = 2000 #invest only 2000 for now
-#fetch_investment_amount()
+invest_amount = fetch_investment_amount() #invest default of 2000 for now
+
 
 # Calculate grid step
 grid_step = (upper_price - lower_price) / grid_levels
