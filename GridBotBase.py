@@ -115,7 +115,7 @@ def run_grid_bot():
                 if price not in active_sell_orders and price < current_price:
                     fee = calculate_fees("taker", volume=0)
                     eth_balance = get_available_balance('ETH')
-                    if eth_balance >= order_size:
+                    if eth_balance >= order_size and eth_balance > 0:
                         order = place_order('sell', price, order_size, fee_type='taker')
                         if order:
                             active_sell_orders[price] = order
