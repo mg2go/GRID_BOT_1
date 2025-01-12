@@ -49,12 +49,13 @@ def fetch_investment_amount():
 
 invest_amount = fetch_investment_amount()
 grid_step = (upper_price - lower_price) / grid_levels
-ticker = exchange.fetch_ticker(symbol)
-current_price = ticker['last']
-order_size = (invest_amount / grid_levels) / current_price
-grid_prices = [lower_price + i * grid_step for i in range(grid_levels + 1)]
-sell_prices = grid_prices[-5:]
-buy_prices = grid_prices[:5]
+
+def calculate_order_size(current_price):
+    eth_balance = get_available_balance('ETH')
+    eur_balance = get_available_balance('EUR')
+    order_size_eth = eth_balance / grid_levels
+    order_size_eur = (eur_balance / grid_levels) / current_price
+    return min(order_size_eth, order_size_eur)
 
 def calculate_fees(order_type, volume):
     kraken_fee_tiers = {
@@ -100,6 +101,8 @@ def run_grid_bot():
             ticker = exchange.fetch_ticker(symbol)
             current_price = ticker['last']
             print(f"Current price: {current_price}")
+
+            order_size = calculate_order_size(current_price)
 
             for price in sell_prices[:]:
                 if price not in active_sell_orders and price < current_price:
