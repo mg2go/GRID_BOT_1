@@ -30,6 +30,7 @@ symbol = 'ETH/EUR'
 lower_price = 1850
 upper_price = 4000
 grid_levels = 10
+min_order_size = 0.00000001  # Minimum order size for Kraken
 
 def get_available_balance(currency):
     try:
@@ -55,7 +56,7 @@ def calculate_order_size(current_price):
     eur_balance = get_available_balance('EUR')
     order_size_eth = eth_balance / grid_levels
     order_size_eur = (eur_balance / grid_levels) / current_price
-    return min(order_size_eth, order_size_eur)
+    return max(min(order_size_eth, order_size_eur), min_order_size)
 
 def calculate_fees(order_type, volume):
     kraken_fee_tiers = {
@@ -79,6 +80,9 @@ def update_total_invested(amount):
     os.environ['TOTAL_INVESTED'] = str(total_invested)
 
 def place_order(side, price, amount, fee_type='taker'):
+    if amount < min_order_size:
+        print(f"Order size {amount} is below the minimum precision {min_order_size}. Order not placed.")
+        return None
     try:
         order = exchange.create_limit_order(symbol, side, amount, price)
         print(f"{side.capitalize()} order placed: {amount} {symbol} at {price}")
