@@ -89,6 +89,9 @@ def place_order(side, price, amount, fee_type='taker'):
         return None
 
 def run_grid_bot():
+    grid_prices = [lower_price + i * grid_step for i in range(grid_levels + 1)]
+    sell_prices = grid_prices[-5:]
+    buy_prices = grid_prices[:5]
     active_sell_orders = {}
     active_buy_orders = {}
     iteration_count = 0
